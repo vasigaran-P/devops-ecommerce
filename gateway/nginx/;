@@ -1,0 +1,19 @@
+events {}
+
+http {
+    server {
+        listen 80;
+
+        location /auth {
+            proxy_pass http://auth-service:3001/;
+        }
+
+        location /products {
+            proxy_pass http://product-service:3002/;
+        }
+
+        location /orders {
+            proxy_pass http://order-service:3003/;
+        }
+    }
+}
