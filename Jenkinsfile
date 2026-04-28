@@ -84,7 +84,7 @@ pipeline {
                       -v \$(pwd)/zap-reports:/zap/wrk/:rw \
                       ghcr.io/zaproxy/zaproxy:stable \
                       zap-baseline.py \
-                      -t http://nginx:80 \
+                      -t http://nginx-gateway:80 \
                       -r zap-report.html \
                       -I
                 """
