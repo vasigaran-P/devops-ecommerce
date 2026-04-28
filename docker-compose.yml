@@ -1,0 +1,61 @@
+
+services:
+
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    networks:
+      - devops-net
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    networks:
+      - devops-net
+    env_file: ./services/auth-service/.env
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    networks:
+      - devops-net
+    env_file: ./services/product-service/.env
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  order-service:
+    build: ./services/order-service
+    container_name: order-service
+    networks:
+      - devops-net
+    env_file: ./services/order-service/.env
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  nginx:
+    build: ./gateway
+    container_name: nginx-gateway
+    networks:
+      - devops-net
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+    restart: unless-stopped
+
+networks:
+  devops-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
