@@ -73,27 +73,27 @@ pipeline {
                       aquasec/trivy image \
                       --exit-code 0 \
                       --severity HIGH,CRITICAL \
-                      --format table \
                       --timeout 10m \
                       ${DOCKERHUB_USER}/auth-service:${IMAGE_TAG}
                 """
             }
         }
 
-        // 🚀 PARALLEL EXECUTION (ZAP + PUSH)
+        // 🔥 PARALLEL STAGE
         stage('Security & Push') {
             parallel {
 
                 stage('OWASP ZAP scan') {
                     steps {
                         sh 'mkdir -p zap-reports'
+                        sh 'chmod -R 777 zap-reports || true'
+
                         sh """
                             docker run --rm \
-                              --network devops-net \
                               -v \$(pwd)/zap-reports:/zap/wrk/:rw \
                               ghcr.io/zaproxy/zaproxy:stable \
                               zap-baseline.py \
-                              -t http://nginx-gateway:80 \
+                              -t http://host.docker.internal:80 \
                               -r zap-report.html \
                               -I \
                               -z "-config spider.maxDuration=2 -config ajaxSpider.maxDuration=2 -config spider.maxDepth=3"
@@ -128,10 +128,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline passed. Tag: ${IMAGE_TAG}"
+            echo "✅ Pipeline passed. Tag: ${IMAGE_TAG}"
         }
         failure {
-            echo "Pipeline failed. Check logs."
+            echo "❌ Pipeline failed. Check logs."
         }
         always {
             sh 'docker logout || true'
