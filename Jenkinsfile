@@ -35,12 +35,15 @@ pipeline {
         stage('SonarQube analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        sonar-scanner \
-                          -Dsonar.projectKey=node-microservices \
-                          -Dsonar.sources=. \
-                          -Dsonar.exclusions=**/node_modules/**,**/test/**
-                    '''
+                    script {
+                        def scannerHome = tool 'SonarScanner'
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                              -Dsonar.projectKey=node-microservices \
+                              -Dsonar.sources=. \
+                              -Dsonar.exclusions=**/node_modules/**,**/test/**
+                        """
+                    }
                 }
             }
         }
