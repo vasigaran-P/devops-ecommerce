@@ -79,17 +79,17 @@ pipeline {
             }
         }
 
-        // 🔥 PARALLEL STAGE
+        // 🚀 Parallel execution for speed
         stage('Security & Push') {
             parallel {
 
                 stage('OWASP ZAP scan') {
                     steps {
                         sh 'mkdir -p zap-reports'
-                        sh 'chmod -R 777 zap-reports || true'
 
                         sh """
                             docker run --rm \
+                              -u 0 \
                               -v \$(pwd)/zap-reports:/zap/wrk/:rw \
                               ghcr.io/zaproxy/zaproxy:stable \
                               zap-baseline.py \
