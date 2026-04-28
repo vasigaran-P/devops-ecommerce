@@ -69,10 +69,12 @@ pipeline {
                 sh """
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v trivy-cache:/root/.cache/trivy \
                       aquasec/trivy image \
                       --exit-code 0 \
                       --severity HIGH,CRITICAL \
                       --format table \
+                      --timeout 10m \
                       ${DOCKERHUB_USER}/auth-service:${IMAGE_TAG}
                 """
             }
