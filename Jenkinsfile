@@ -2,9 +2,10 @@ pipeline {
   agent any
 
   environment {
-    DOCKERHUB_USER   = "vasigaran"
-    IMAGE_TAG        = "${env.GIT_COMMIT?.take(7) ?: 'latest'}"
-    DOCKERHUB_CREDS  = credentials('dockerhub-credentials')
+    AWS_REGION      = "ap-south-1"
+    ECR_REGISTRY    = "474418737424.dkr.ecr.ap-south-1.amazonaws.com"
+    IMAGE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'latest'}"
+    CLUSTER_NAME    = "devops-ecommerce"
   }
 
   stages {
@@ -37,7 +38,6 @@ pipeline {
         withSonarQubeEnv('SonarQube') {
           script {
             def scannerHome = tool 'SonarScanner'
-            // sonar-project.properties in root handles all config
             sh "${scannerHome}/bin/sonar-scanner"
           }
         }
@@ -54,13 +54,12 @@ pipeline {
 
     stage('Docker build') {
       steps {
-        sh "docker build -t ${DOCKERHUB_USER}/auth-service:${IMAGE_TAG}    services/auth-service"
-        sh "docker build -t ${DOCKERHUB_USER}/order-service:${IMAGE_TAG}   services/order-service"
-        sh "docker build -t ${DOCKERHUB_USER}/product-service:${IMAGE_TAG} services/product-service"
+        sh "docker build -t ${ECR_REGISTRY}/auth-service:${IMAGE_TAG}    services/auth-service"
+        sh "docker build -t ${ECR_REGISTRY}/order-service:${IMAGE_TAG}   services/order-service"
+        sh "docker build -t ${ECR_REGISTRY}/product-service:${IMAGE_TAG} services/product-service"
       }
     }
 
-    // 🚀 All security scans + push in parallel
     stage('Security & Push') {
       parallel {
 
@@ -76,7 +75,7 @@ pipeline {
                     --exit-code 1 \
                     --severity CRITICAL \
                     --timeout 10m \
-                    ${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}
+                    ${ECR_REGISTRY}/${svc}:${IMAGE_TAG}
                 """
               }
             }
@@ -111,14 +110,15 @@ pipeline {
           }
         }
 
-        stage('Push to DockerHub') {
+        stage('Push to ECR') {
           steps {
             sh """
-              echo \${DOCKERHUB_CREDS_PSW} | \
-              docker login -u \${DOCKERHUB_CREDS_USR} --password-stdin
-              docker push ${DOCKERHUB_USER}/auth-service:${IMAGE_TAG}
-              docker push ${DOCKERHUB_USER}/order-service:${IMAGE_TAG}
-              docker push ${DOCKERHUB_USER}/product-service:${IMAGE_TAG}
+              aws ecr get-login-password --region ${AWS_REGION} | \
+              docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+              docker push ${ECR_REGISTRY}/auth-service:${IMAGE_TAG}
+              docker push ${ECR_REGISTRY}/order-service:${IMAGE_TAG}
+              docker push ${ECR_REGISTRY}/product-service:${IMAGE_TAG}
             """
           }
         }
