@@ -99,6 +99,14 @@ resource "aws_security_group" "jenkins" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "SonarQube"
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -149,18 +157,23 @@ resource "aws_iam_instance_profile" "jenkins" {
 
 # ── Jenkins EC2 Instance ──────────────────────────────
 resource "aws_instance" "jenkins" {
-  ami                         = "ami-0f58b397bc5c1f2e8" # Ubuntu 22.04 ap-south-1
-  instance_type               = "t3.medium"
+  ami                         = "ami-0f58b397bc5c1f2e8"
+  instance_type               = "t3.large"
   subnet_id                   = module.vpc.public_subnets[0]
   vpc_security_group_ids      = [aws_security_group.jenkins.id]
   key_name                    = aws_key_pair.jenkins.key_name
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.jenkins.name
 
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp3"
+  }
+
   user_data = <<-EOF
     #!/bin/bash
     apt-get update -y
-    apt-get install -y ca-certificates curl gnupg unzip
+    apt-get install -y ca-certificates curl gnupg unzip wget
 
     # Install Docker
     install -m 0755 -d /etc/apt/keyrings
@@ -171,16 +184,27 @@ resource "aws_instance" "jenkins" {
     systemctl enable docker
     systemctl start docker
 
-    # Install Java + Jenkins
-    curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | tee /usr/share/keyrings/jenkins-keyring.asc
-    echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | tee /etc/apt/sources.list.d/jenkins.list
-    apt-get update -y
-    apt-get install -y openjdk-17-jdk jenkins
+    # Install Java 21
+    apt-get install -y openjdk-21-jdk
 
-    # Add jenkins to docker group
+    # Install Jenkins
+    wget -O /usr/share/keyrings/jenkins-keyring.asc \
+      https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    echo "deb [trusted=yes] https://pkg.jenkins.io/debian-stable binary/" | \
+      tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+    apt-get update -y
+    apt-get install -y jenkins
+
+    # Add jenkins and ubuntu to docker group
     usermod -aG docker jenkins
+    usermod -aG docker ubuntu
     systemctl enable jenkins
+    systemctl reset-failed jenkins || true
     systemctl start jenkins
+
+    # Install Node.js 18
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt-get install -y nodejs
 
     # Install AWS CLI
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -190,10 +214,31 @@ resource "aws_instance" "jenkins" {
     # Install kubectl
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+    # Start SonarQube
+    docker run -d \
+      --name sonarqube \
+      --restart unless-stopped \
+      -p 9000:9000 \
+      -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
+      -v sonar_data:/opt/sonarqube/data \
+      -v sonar_logs:/opt/sonarqube/logs \
+      sonarqube:community
   EOF
 
   tags = {
     Name    = "jenkins-server"
+    Project = var.cluster_name
+  }
+}
+
+# ── Elastic IP for Jenkins ────────────────────────────
+resource "aws_eip" "jenkins" {
+  instance = aws_instance.jenkins.id
+  domain   = "vpc"
+
+  tags = {
+    Name    = "jenkins-eip"
     Project = var.cluster_name
   }
 }

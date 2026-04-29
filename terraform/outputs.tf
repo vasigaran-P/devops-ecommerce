@@ -22,3 +22,7 @@ output "private_subnets" {
 output "jenkins_public_ip" {
   value = aws_instance.jenkins.public_ip
 }
+
+output "jenkins_elastic_ip" {
+  value = aws_eip.jenkins.public_ip
+}

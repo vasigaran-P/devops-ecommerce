@@ -2,10 +2,10 @@ pipeline {
   agent any
 
   environment {
-    AWS_REGION      = "ap-south-1"
-    ECR_REGISTRY    = "474418737424.dkr.ecr.ap-south-1.amazonaws.com"
-    IMAGE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'latest'}"
-    CLUSTER_NAME    = "devops-ecommerce"
+    AWS_REGION   = "ap-south-1"
+    ECR_REGISTRY = "474418737424.dkr.ecr.ap-south-1.amazonaws.com"
+    IMAGE_TAG    = "${env.GIT_COMMIT?.take(7) ?: 'latest'}"
+    CLUSTER_NAME = "devops-ecommerce"
   }
 
   stages {
@@ -101,7 +101,7 @@ pipeline {
                 """,
                 returnStatus: true
               )
-              echo "ZAP scan exit code: ${zapResult} (ignored until app is on EKS)"
+              echo "ZAP exit code: ${zapResult} (non-blocking until app on EKS)"
             }
           }
           post {
