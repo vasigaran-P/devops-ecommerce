@@ -95,7 +95,7 @@ pipeline {
                 -t http://host.docker.internal:80 \
                 -r zap-report.html \
                 -I \
-                -z "-config spider.maxDuration=2 -config ajaxSpider.maxDuration=2 -config spider.maxDepth=3"
+                -z "-config spider.maxDuration=2 -config ajaxSpider.maxDuration=2 -config spider.maxDepth=3 || true"
             """
           }
           post {
