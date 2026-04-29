@@ -1,6 +1,7 @@
 node_modules
+npm-debug.log
 .env
 .git
 .gitignore
-*.md
-npm-debug.log
+coverage
+*.test.js
