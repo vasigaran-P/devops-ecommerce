@@ -85,18 +85,24 @@ pipeline {
         stage('OWASP ZAP scan') {
           steps {
             sh 'mkdir -p zap-reports'
-            sh """
-              docker run --rm \
-                -u 0 \
-                --add-host host.docker.internal:host-gateway \
-                -v \$(pwd)/zap-reports:/zap/wrk/:rw \
-                ghcr.io/zaproxy/zaproxy:stable \
-                zap-baseline.py \
-                -t http://host.docker.internal:80 \
-                -r zap-report.html \
-                -I \
-                -z "-config spider.maxDuration=2 -config ajaxSpider.maxDuration=2 -config spider.maxDepth=3 || true"
-            """
+            script {
+              def zapResult = sh(
+                script: """
+                  docker run --rm \
+                    -u 0 \
+                    --add-host host.docker.internal:host-gateway \
+                    -v \$(pwd)/zap-reports:/zap/wrk/:rw \
+                    ghcr.io/zaproxy/zaproxy:stable \
+                    zap-baseline.py \
+                    -t http://host.docker.internal:80 \
+                    -r zap-report.html \
+                    -I \
+                    -z "-config spider.maxDuration=2 -config ajaxSpider.maxDuration=2 -config spider.maxDepth=3"
+                """,
+                returnStatus: true
+              )
+              echo "ZAP scan exit code: ${zapResult} (ignored until app is on EKS)"
+            }
           }
           post {
             always {
