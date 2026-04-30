@@ -94,14 +94,14 @@ pipeline {
                     -v \$(pwd)/zap-reports:/zap/wrk/:rw \
                     ghcr.io/zaproxy/zaproxy:stable \
                     zap-baseline.py \
-                    -t http://host.docker.internal:80 \
+                    -t http://k8s-devopsec-ecommerc-dcd2216c10-1453832365.ap-south-1.elb.amazonaws.com/auth \
                     -r zap-report.html \
                     -I \
                     -z "-config spider.maxDuration=2 -config ajaxSpider.maxDuration=2 -config spider.maxDepth=3"
                 """,
                 returnStatus: true
               )
-              echo "ZAP exit code: ${zapResult} (non-blocking until app on EKS)"
+              echo "ZAP exit code: ${zapResult}"
             }
           }
           post {
@@ -129,6 +129,22 @@ pipeline {
           }
         }
 
+      }
+    }
+
+    stage('Update K8s manifests') {
+      steps {
+        sh """
+          sed -i "s|auth-service:.*|auth-service:${IMAGE_TAG}|g" k8s/auth/deployment.yaml
+          sed -i "s|product-service:.*|product-service:${IMAGE_TAG}|g" k8s/product/deployment.yaml
+          sed -i "s|order-service:.*|order-service:${IMAGE_TAG}|g" k8s/order/deployment.yaml
+
+          git config user.email "jenkins@devops-ecommerce.com"
+          git config user.name "Jenkins"
+          git add k8s/auth/deployment.yaml k8s/product/deployment.yaml k8s/order/deployment.yaml
+          git diff --staged --quiet || git commit -m "update image tags to ${IMAGE_TAG} [skip ci]"
+          git push origin main
+        """
       }
     }
 
