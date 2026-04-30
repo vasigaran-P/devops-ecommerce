@@ -2,21 +2,20 @@ const express = require("express");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+
 const app = express();
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.log(err));
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log(err));
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.header("Authorization");
   const token = authHeader && authHeader.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
     : authHeader;
-  if (!token) {
-    return res.status(401).json({ message: "No token" });
-  }
+  if (!token) return res.status(401).json({ message: "No token" });
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
     req.user = verified;
@@ -26,14 +25,12 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-app.get("/", authMiddleware, (req, res) => {
+app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/products", authMiddleware, (req, res) => {
   res.send("Product Service Running (Protected)");
 });
-
-app.get("/user", authMiddleware, (req, res) => {
+app.get("/products/user", authMiddleware, (req, res) => {
   res.json(req.user);
 });
 
-app.listen(3002, () => {
-  console.log("Product Service running on port 3002");
-});
+app.listen(3002, () => console.log("Product Service running on port 3002"));
