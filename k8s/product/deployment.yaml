@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: 474418737424.dkr.ecr.ap-south-1.amazonaws.com/product-service:9c812f3
+          image: 474418737424.dkr.ecr.ap-south-1.amazonaws.com/product-service:aadaf9f
           ports:
             - containerPort: 3002
           envFrom:
