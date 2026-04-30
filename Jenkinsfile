@@ -6,6 +6,7 @@ pipeline {
     ECR_REGISTRY = "474418737424.dkr.ecr.ap-south-1.amazonaws.com"
     IMAGE_TAG    = "${env.GIT_COMMIT?.take(7) ?: 'latest'}"
     CLUSTER_NAME = "devops-ecommerce"
+    GITHUB_CREDS = credentials('github-credentials')
   }
 
   stages {
@@ -144,7 +145,7 @@ pipeline {
           git checkout main || git checkout -b main
           git add k8s/auth/deployment.yaml k8s/product/deployment.yaml k8s/order/deployment.yaml
           git diff --staged --quiet || git commit -m "update image tags to ${IMAGE_TAG} [skip ci]"
-          git push origin main
+          git push https://${GITHUB_CREDS_USR}:${GITHUB_CREDS_PSW}@github.com/vasigaran-P/devops-ecommerce.git main
         """
       }
     }
