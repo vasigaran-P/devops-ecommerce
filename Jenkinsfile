@@ -141,6 +141,7 @@ pipeline {
 
           git config user.email "jenkins@devops-ecommerce.com"
           git config user.name "Jenkins"
+          git checkout main || git checkout -b main
           git add k8s/auth/deployment.yaml k8s/product/deployment.yaml k8s/order/deployment.yaml
           git diff --staged --quiet || git commit -m "update image tags to ${IMAGE_TAG} [skip ci]"
           git push origin main
