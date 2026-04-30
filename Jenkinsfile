@@ -136,13 +136,12 @@ pipeline {
     stage('Update K8s manifests') {
       steps {
         sh """
+          git config user.email "jenkins@devops-ecommerce.com"
+          git config user.name "Jenkins"
+          git checkout -B main origin/main
           sed -i "s|auth-service:.*|auth-service:${IMAGE_TAG}|g" k8s/auth/deployment.yaml
           sed -i "s|product-service:.*|product-service:${IMAGE_TAG}|g" k8s/product/deployment.yaml
           sed -i "s|order-service:.*|order-service:${IMAGE_TAG}|g" k8s/order/deployment.yaml
-
-          git config user.email "jenkins@devops-ecommerce.com"
-          git config user.name "Jenkins"
-          git checkout main || git checkout -b main
           git add k8s/auth/deployment.yaml k8s/product/deployment.yaml k8s/order/deployment.yaml
           git diff --staged --quiet || git commit -m "update image tags to ${IMAGE_TAG} [skip ci]"
           git push https://${GITHUB_CREDS_USR}:${GITHUB_CREDS_PSW}@github.com/vasigaran-P/devops-ecommerce.git main
